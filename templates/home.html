@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: #f5f5f5;">
+    <div class="container">
+        <div class="home-header">
+            <h2>Hey, {{ username }}</h2>
+            <a href="{{ url_for('logout') }}"><button class="logout-btn">Logout</button></a>
+        </div>
+
+        <div class="add-friend-section">
+            <input type="text" id="friend-username" placeholder="Enter username to add friend">
+            <button onclick="addFriend()">Add Friend</button>
+        </div>
+
+        <div class="friends-list">
+            <h3>Your Friends</h3>
+            {% if friends %}
+                {% for friend in friends %}
+                    <div class="friend-item">
+                        <a href="{{ url_for('chat', friend_username=friend.username) }}">{{ friend.username }}</a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #999;">No friends yet. Add someone!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function addFriend() {
+            const username = document.getElementById('friend-username').value;
+            if (!username) return;
+
+            fetch('/add_friend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to add friend');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

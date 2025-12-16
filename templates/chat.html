@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with {{ friend }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body style="background: #f5f5f5; padding: 20px;" data-username="{{ session.username }}">
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2><a href="{{ url_for('home') }}">←</a> Chat with {{ friend }}</h2>
+        </div>
+
+        <div class="chat-messages" id="messages">
+            {% for msg in messages %}
+                <div class="message {% if msg.username == session.username %}sent{% else %}received{% endif %}">
+                    <div class="message-sender">{{ msg.username }}</div>
+                    <div class="message-text">{{ msg.message }}</div>
+                    <div class="message-time">{{ msg.timestamp }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="typing-indicator" id="typing-indicator" style="display: none;"></div>
+
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Type a message..." autofocus>
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
