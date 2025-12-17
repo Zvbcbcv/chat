@@ -75,6 +75,17 @@ body {
     margin-top: 10px;
 }
 
+.error-message {
+    background: #ffe6e6;
+    color: #dc3545;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin: 15px 0;
+    text-align: center;
+    border: 1px solid #ffcccc;
+}
+
 .auth-container button:hover {
     transform: scale(1.05);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -176,48 +187,56 @@ body {
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
 }
 
-.friends-list {
+.chats-section {
     background: white;
-    padding: 25px 30px;
     border-radius: 16px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
 }
 
-.friends-list h3 {
-    margin-bottom: 20px;
+.chats-section h3 {
+    padding: 25px 30px 15px;
     color: #000;
     font-size: 20px;
     font-weight: 700;
+    margin: 0;
 }
 
-.friend-item {
-    padding: 18px 0;
-    border-bottom: 1px solid #f0f0f0;
+.chat-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 18px 30px;
+    border-top: 1px solid #f0f0f0;
+    text-decoration: none;
+    color: #000;
     transition: all 0.3s ease;
 }
 
-.friend-item:hover {
-    padding-left: 10px;
+.chat-item:hover {
+    background: #fafafa;
+    padding-left: 35px;
 }
 
-.friend-item:last-child {
-    border-bottom: none;
+.chat-info {
+    flex: 1;
 }
 
-.friend-item a {
-    color: #000;
-    text-decoration: none;
+.chat-name {
     font-weight: 600;
     font-size: 16px;
-    transition: all 0.3s ease;
+    margin-bottom: 4px;
 }
 
-.friend-item a:hover {
-    transform: translateX(5px);
-    display: inline-block;
+.chat-preview {
+    font-size: 14px;
+    color: #666;
+}
+
+.chat-time {
+    font-size: 12px;
+    color: #999;
+    margin-left: 15px;
 }
 
 .chat-container {
