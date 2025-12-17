@@ -1,9 +1,13 @@
 const socket = io();
 
-const room = window.location.pathname.split('/').pop();
-const receiver = room;
+const room = document.body.dataset.room;
+const receiver = window.location.pathname.split('/').pop();
 
 socket.emit('join', { room: room });
+
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
 
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
@@ -55,6 +59,13 @@ socket.on('receive_message', (data) => {
     
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    if (!isSent && document.hidden && Notification.permission === 'granted') {
+        new Notification(`New message from ${data.sender}`, {
+            body: data.message,
+            icon: '/static/favicon.svg'
+        });
+    }
 });
 
 socket.on('user_typing', (data) => {

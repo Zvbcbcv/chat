@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with {{ friend }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
-<body style="background: #f5f5f5; padding: 20px;" data-username="{{ session.username }}">
+<body style="background: #f5f5f5; padding: 20px;" data-username="{{ session.username }}" data-room="{{ room }}">
     <div class="chat-container">
         <div class="chat-header">
             <h2><a href="{{ url_for('home') }}">←</a> Chat with {{ friend }}</h2>

@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
 </head>
 <body>
     <div class="auth-container">
         <h2>Welcome Back</h2>
         <form method="POST">
-            <input type="text", name="username", placeholder="Username" required autofocus>
-            <input type="password", name="password", placeholder="Password" required>
+            <input type="text" name="username" placeholder="Username" required autofocus>
+            <input type="password" name="password" placeholder="Password" required>
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
             <button type="submit">Sign In</button>
         </form>
         <a href="/register">New here? Create an account</a>

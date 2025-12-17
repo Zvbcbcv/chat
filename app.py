@@ -29,7 +29,7 @@ def init_db():
     
     c.execute('''CREATE TABLE IF NOT EXISTS messages
                  (id SERIAL PRIMARY KEY, sender_id INTEGER, receiver_id INTEGER,
-                  message TEXT, timestamp TIMESTAMP)''')
+                  message TEXT, timestamp TIMESTAMP, read BOOLEAN DEFAULT FALSE)''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS conversations
                  (id SERIAL PRIMARY KEY, user1_id INTEGER, user2_id INTEGER,
@@ -38,6 +38,11 @@ def init_db():
     
     conn.commit()
     conn.close()
+
+try:
+    init_db()
+except Exception as e:
+    print(f"Database initialization error: {e}")
 
 def get_user_id(username):
     conn = get_db()
@@ -60,9 +65,9 @@ def register():
         username = request.form['username']
         password = request.form['password']
         
-        conn = get_db()
-        c = conn.cursor()
         try:
+            conn = get_db()
+            c = conn.cursor()
             c.execute('INSERT INTO users (username, password) VALUES (%s, %s)',
                       (username, password))
             conn.commit()
@@ -71,6 +76,9 @@ def register():
         except psycopg2.IntegrityError:
             conn.close()
             error = 'Username already exists'
+        except Exception as e:
+            print(f"Register error: {e}")
+            error = 'Registration failed'
     
     return render_template('register.html', error=error)
 
@@ -81,18 +89,22 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
-        conn = get_db()
-        c = conn.cursor(cursor_factory=RealDictCursor)
-        c.execute('SELECT * FROM users WHERE username = %s AND password = %s',
-                 (username, password))
-        user = c.fetchone()
-        conn.close()
-        
-        if user:
-            session['username'] = username
-            session['user_id'] = user['id']
-            return redirect(url_for('home'))
-        error = 'Invalid username or password'
+        try:
+            conn = get_db()
+            c = conn.cursor(cursor_factory=RealDictCursor)
+            c.execute('SELECT * FROM users WHERE username = %s AND password = %s',
+                     (username, password))
+            user = c.fetchone()
+            conn.close()
+            
+            if user:
+                session['username'] = username
+                session['user_id'] = user['id']
+                return redirect(url_for('home'))
+            error = 'Invalid username or password'
+        except Exception as e:
+            print(f"Login error: {e}")
+            error = 'Invalid username or password'
     
     return render_template('login.html', error=error)
 
@@ -109,13 +121,16 @@ def home():
     conn = get_db()
     c = conn.cursor(cursor_factory=RealDictCursor)
     
-    c.execute('''SELECT DISTINCT ON (LEAST(m.sender_id, m.receiver_id), GREATEST(m.sender_id, m.receiver_id))
-                 u.username, m.message as last_message, m.timestamp as last_timestamp
+    c.execute('''SELECT u.id, u.username, 
+                 MAX(m.message) as last_message, 
+                 MAX(m.timestamp) as last_timestamp,
+                 COUNT(CASE WHEN m.receiver_id = %s AND m.read = FALSE THEN 1 END) as unread_count
                  FROM messages m
                  JOIN users u ON (CASE WHEN m.sender_id = %s THEN m.receiver_id ELSE m.sender_id END) = u.id
                  WHERE m.sender_id = %s OR m.receiver_id = %s
-                 ORDER BY LEAST(m.sender_id, m.receiver_id), GREATEST(m.sender_id, m.receiver_id), m.timestamp DESC''',
-             (session['user_id'], session['user_id'], session['user_id']))
+                 GROUP BY u.id, u.username
+                 ORDER BY MAX(m.timestamp) DESC''',
+             (session['user_id'], session['user_id'], session['user_id'], session['user_id']))
     
     conversations = c.fetchall()
     
@@ -171,6 +186,12 @@ def chat(friend_username):
     
     conn = get_db()
     c = conn.cursor(cursor_factory=RealDictCursor)
+    
+    c.execute('''UPDATE messages SET read = TRUE 
+                 WHERE receiver_id = %s AND sender_id = %s''',
+             (session['user_id'], friend_id))
+    conn.commit()
+    
     c.execute('''SELECT u.username, m.message, m.timestamp
                 FROM messages m
                 JOIN users u ON m.sender_id = u.id
@@ -223,5 +244,4 @@ def handle_stop_typing(data):
     emit('user_stop_typing', room=room, include_self=False)
 
 if __name__ == '__main__':
-    init_db()
     socketio.run(app, debug=True)
