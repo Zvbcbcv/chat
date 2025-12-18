@@ -48,21 +48,29 @@
             {% endif %}
         </div>
 
-        <div class="friends-section">
+        <div class="chats-section">
             <h3>Friends</h3>
+        
             {% if friends %}
-                <div class="friends-grid">
-                    {% for friend in friends %}
-                        <a href="{{ url_for('chat', friend_username=friend.username) }}" class="friend-button">
-                            {{ friend.username }}
-                        </a>
-                    {% endfor %}
-                </div>
+                {% for friend in friends %}
+                    <a href="{{ url_for('chat', friend_username=friend.username) }}" class="chat-item">
+                        <div class="chat-info">
+                            <div class="chat-name">
+                                {{ friend.username }}
+                            </div>
+                            <div class="chat-preview">
+                                Click to start chatting
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
             {% else %}
-                <p style="color: #999; text-align: center; padding: 20px;">No friends yet</p>
+                <p style="color: #999; text-align: center; padding: 40px;">
+                    No friends yet
+                </p>
             {% endif %}
         </div>
-    </div>
+        
 
     <script>
         function addFriend() {
