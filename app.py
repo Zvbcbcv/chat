@@ -58,12 +58,28 @@ def index():
         return redirect(url_for('home'))
     return redirect(url_for('login'))
 
+import base64
+
+def load_banned_words():
+    try:
+        with open('banned.txt', 'r') as f:
+            encoded = f.read().strip().split('\n')
+            return [base64.b64decode(word).decode('utf-8') for word in encoded]
+    except:
+        return []
+
+BANNED_WORDS = load_banned_words()
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     error = None
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip().lower()
         password = request.form['password']
+        
+        if any(banned in username for banned in BANNED_WORDS):
+            error = 'Username contains inappropriate language'
+            return render_template('register.html', error=error)
         
         try:
             conn = get_db()
@@ -147,9 +163,9 @@ def home():
 @app.route('/add_friend', methods=['POST'])
 def add_friend():
     if 'username' not in session:
-        return jsonify({'success': False})
+        return jsonify({'success': False, 'error': 'Not logged in'})
     
-    friend_username = request.json['username']
+    friend_username = request.json['username'].strip().lower()
     friend_id = get_user_id(friend_username)
     
     if not friend_id:
@@ -160,6 +176,13 @@ def add_friend():
     
     conn = get_db()
     c = conn.cursor()
+    
+    c.execute('SELECT * FROM friends WHERE user_id = %s AND friend_id = %s',
+              (session['user_id'], friend_id))
+    if c.fetchone():
+        conn.close()
+        return jsonify({'success': False, 'error': 'Already friends'})
+    
     try:
         c.execute('INSERT INTO friends (user_id, friend_id) VALUES (%s, %s)',
                   (session['user_id'], friend_id))
@@ -168,9 +191,10 @@ def add_friend():
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    except psycopg2.IntegrityError:
+    except Exception as e:
         conn.close()
-        return jsonify({'success': False, 'error': 'Already friends'})
+        print(f"Add friend error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add friend'})
 
 @app.route('/chat/<friend_username>')
 def chat(friend_username):
@@ -188,7 +212,7 @@ def chat(friend_username):
     c = conn.cursor(cursor_factory=RealDictCursor)
     
     c.execute('''UPDATE messages SET read = TRUE 
-                 WHERE receiver_id = %s AND sender_id = %s''',
+                 WHERE receiver_id = %s AND sender_id = %s AND read = FALSE''',
              (session['user_id'], friend_id))
     conn.commit()
     

@@ -16,8 +16,14 @@
 
         <div class="add-friend-section">
             <input type="text" id="friend-username" placeholder="Add friend by username">
-            <button onclick="addFriend()">Add</button>
-            <span id="error-msg" style="color: #dc3545; margin-left: 10px; display: none;"></span>
+            <button onclick="addFriend()">Add Friend</button>
+        </div>
+        
+        <div id="notification-popup" class="notification-popup" style="display: none;">
+            <div class="notification-content">
+                <strong id="notif-sender"></strong>
+                <p id="notif-message"></p>
+            </div>
         </div>
 
         <div class="chats-section">
@@ -41,71 +47,31 @@
                 <p style="color: #999; text-align: center; padding: 40px;">No messages yet. Add a friend to start chatting!</p>
             {% endif %}
         </div>
-    </div>
 
-    <script>
-        function addFriend() {
-            const username = document.getElementById('friend-username').value;
-            const errorMsg = document.getElementById('error-msg');
-            
-            if (!username) return;
-
-            fetch('/add_friend', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: username })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    errorMsg.textContent = data.error || 'Failed to add friend';
-                    errorMsg.style.display = 'inline';
-                    setTimeout(() => errorMsg.style.display = 'none', 3000);
-                }
-            });
-        }
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body style="background: #f5f5f5;">
-    <div class="container">
-        <div class="home-header">
-            <h2>Hey, {{ username }}</h2>
-            <a href="{{ url_for('logout') }}"><button class="logout-btn">Logout</button></a>
-        </div>
-
-        <div class="add-friend-section">
-            <input type="text" id="friend-username" placeholder="Enter username to add friend">
-            <button onclick="addFriend()">Add Friend</button>
-        </div>
-
-        <div class="friends-list">
-            <h3>Your Friends</h3>
+        <div class="friends-section">
+            <h3>Friends</h3>
             {% if friends %}
-                {% for friend in friends %}
-                    <div class="friend-item">
-                        <a href="{{ url_for('chat', friend_username=friend.username) }}">{{ friend.username }}</a>
-                    </div>
-                {% endfor %}
+                <div class="friends-grid">
+                    {% for friend in friends %}
+                        <a href="{{ url_for('chat', friend_username=friend.username) }}" class="friend-button">
+                            {{ friend.username }}
+                        </a>
+                    {% endfor %}
+                </div>
             {% else %}
-                <p style="color: #999;">No friends yet. Add someone!</p>
+                <p style="color: #999; text-align: center; padding: 20px;">No friends yet</p>
             {% endif %}
         </div>
     </div>
 
     <script>
         function addFriend() {
-            const username = document.getElementById('friend-username').value;
-            if (!username) return;
+            const username = document.getElementById('friend-username').value.trim();
+            
+            if (!username) {
+                showPopup('Please enter a username', true);
+                return;
+            }
 
             fetch('/add_friend', {
                 method: 'POST',
@@ -117,9 +83,24 @@
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert(data.error || 'Failed to add friend');
+                    showPopup(data.error || 'Failed to add friend', true);
                 }
             });
+        }
+
+        function showPopup(message, isError) {
+            const popup = document.createElement('div');
+            popup.className = 'custom-popup';
+            popup.style.background = isError ? '#ffe6e6' : '#e6ffe6';
+            popup.style.color = isError ? '#dc3545' : '#28a745';
+            popup.textContent = message;
+            document.body.appendChild(popup);
+            
+            setTimeout(() => popup.classList.add('show'), 10);
+            setTimeout(() => {
+                popup.classList.remove('show');
+                setTimeout(() => popup.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>
