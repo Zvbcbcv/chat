@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import psycopg2
@@ -239,12 +242,13 @@ def chat(friend_username):
     messages = c.fetchall()
     conn.close()
     
-    return render_template('chat.html', friend=friend_username, messages=messages, room=room)
+    return render_template('chat.html', friend=friend_username, messages=messages, room=room, user_id=session['user_id'])
 
 @socketio.on('join')
 def on_join(data):
     room = data['room']
     join_room(room)
+    join_room(f"user_{session['user_id']}")
     session.modified = True
 
 @socketio.on('send_message')
@@ -259,16 +263,41 @@ def handle_message(data):
     
     conn = get_db()
     c = conn.cursor()
-    c.execute('INSERT INTO messages (sender_id, receiver_id, message, timestamp) VALUES (%s, %s, %s, %s)',
+    c.execute('INSERT INTO messages (sender_id, receiver_id, message, timestamp) VALUES (%s, %s, %s, %s) RETURNING id',
               (session['user_id'], receiver_id, message, timestamp))
+    message_id = c.fetchone()[0]
     conn.commit()
     conn.close()
     
     emit('receive_message', {
         'sender': sender,
         'message': message,
-        'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'message_id': message_id
     }, room=room)
+    
+    emit('new_message_notification', {
+        'sender': sender,
+        'message': message
+    }, room=f"user_{receiver_id}")
+
+@socketio.on('mark_read')
+def mark_read(data):
+    message_id = data['message_id']
+    
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('UPDATE messages SET read = TRUE WHERE id = %s RETURNING sender_id',
+              (message_id,))
+    result = c.fetchone()
+    conn.commit()
+    conn.close()
+    
+    if result:
+        sender_id = result[0]
+        emit('message_read', {
+            'message_id': message_id
+        }, room=f"user_{sender_id}")
 
 @socketio.on('typing')
 def handle_typing(data):

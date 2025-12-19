@@ -52,29 +52,45 @@ socket.on('receive_message', (data) => {
     const isSent = data.sender === currentUser;
     
     messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+    messageDiv.setAttribute('data-message-id', data.message_id);
     messageDiv.innerHTML = `
         <div class="message-sender">${data.sender}</div>
         <div class="message-text">${data.message}</div>
-        <div class="message-time">${data.timestamp}</div>
+        <div class="message-time">
+            ${data.timestamp}
+            ${isSent ? '<span class="read-receipt">✓</span>' : ''}
+        </div>
     `;
     
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
-    if (!isSent && document.hidden && Notification.permission === 'granted') {
-        new Notification(`New message from ${data.sender}`, {
-            body: data.message,
-            icon: '/static/favicon.svg'
-        });
+    if (!isSent) {
+        socket.emit('mark_read', { message_id: data.message_id });
+        
+        if (document.hidden && Notification.permission === 'granted') {
+            new Notification(`New message from ${data.sender}`, {
+                body: data.message,
+                icon: '/static/favicon.svg'
+            });
+        }
+    }
+});
+
+socket.on('message_read', (data) => {
+    const messageDiv = document.querySelector(`[data-message-id="${data.message_id}"]`);
+    if (messageDiv) {
+        const receipt = messageDiv.querySelector('.read-receipt');
+        if (receipt) {
+            receipt.textContent = '✓✓';
+        }
     }
 });
 
 socket.on('new_message_notification', (data) => {
-    if (data.receiver_id === currentUserId && data.sender !== document.body.dataset.username) {
-        const currentChat = window.location.pathname.split('/').pop();
-        if (currentChat !== data.sender) {
-            showNotificationBar(data.sender, data.message);
-        }
+    const currentChat = window.location.pathname.split('/').pop();
+    if (currentChat !== data.sender) {
+        showNotificationBar(data.sender, data.message);
     }
 });
 
