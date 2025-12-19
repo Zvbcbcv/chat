@@ -2,6 +2,7 @@ const socket = io();
 
 const room = document.body.dataset.room;
 const receiver = window.location.pathname.split('/').pop();
+const currentUserId = parseInt(document.body.dataset.userId);
 
 socket.emit('join', { room: room });
 
@@ -67,6 +68,34 @@ socket.on('receive_message', (data) => {
         });
     }
 });
+
+socket.on('new_message_notification', (data) => {
+    if (data.receiver_id === currentUserId && data.sender !== document.body.dataset.username) {
+        const currentChat = window.location.pathname.split('/').pop();
+        if (currentChat !== data.sender) {
+            showNotificationBar(data.sender, data.message);
+        }
+    }
+});
+
+function showNotificationBar(sender, message) {
+    const notifBar = document.getElementById('notification-bar');
+    const notifSender = document.getElementById('notif-sender');
+    const notifMessage = document.getElementById('notif-message');
+    
+    notifSender.textContent = sender;
+    notifMessage.textContent = message.length > 50 ? message.substring(0, 50) + '...' : message;
+    
+    notifBar.style.display = 'flex';
+    
+    setTimeout(() => {
+        notifBar.style.display = 'none';
+    }, 5000);
+}
+
+function dismissNotification() {
+    document.getElementById('notification-bar').style.display = 'none';
+}
 
 socket.on('user_typing', (data) => {
     typingIndicator.textContent = `${data.username} is typing...`;

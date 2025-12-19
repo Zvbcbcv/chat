@@ -137,16 +137,29 @@ def home():
     conn = get_db()
     c = conn.cursor(cursor_factory=RealDictCursor)
     
-    c.execute('''SELECT u.id, u.username, 
-                 MAX(m.message) as last_message, 
-                 MAX(m.timestamp) as last_timestamp,
-                 COUNT(CASE WHEN m.receiver_id = %s AND m.read = FALSE THEN 1 END) as unread_count
-                 FROM messages m
-                 JOIN users u ON (CASE WHEN m.sender_id = %s THEN m.receiver_id ELSE m.sender_id END) = u.id
-                 WHERE m.sender_id = %s OR m.receiver_id = %s
-                 GROUP BY u.id, u.username
-                 ORDER BY MAX(m.timestamp) DESC''',
-             (session['user_id'], session['user_id'], session['user_id'], session['user_id']))
+    c.execute('''
+        SELECT DISTINCT ON (other_user_id)
+            other_user_id,
+            username,
+            last_message,
+            last_timestamp,
+            unread_count
+        FROM (
+            SELECT 
+                CASE WHEN m.sender_id = %s THEN m.receiver_id ELSE m.sender_id END as other_user_id,
+                u.username,
+                m.message as last_message,
+                m.timestamp as last_timestamp,
+                SUM(CASE WHEN m.receiver_id = %s AND m.read = FALSE THEN 1 ELSE 0 END) OVER (PARTITION BY CASE WHEN m.sender_id = %s THEN m.receiver_id ELSE m.sender_id END) as unread_count,
+                ROW_NUMBER() OVER (PARTITION BY CASE WHEN m.sender_id = %s THEN m.receiver_id ELSE m.sender_id END ORDER BY m.timestamp DESC) as rn
+            FROM messages m
+            JOIN users u ON (CASE WHEN m.sender_id = %s THEN m.receiver_id ELSE m.sender_id END) = u.id
+            WHERE m.sender_id = %s OR m.receiver_id = %s
+        ) sub
+        WHERE rn = 1
+        ORDER BY other_user_id, last_timestamp DESC
+    ''', (session['user_id'], session['user_id'], session['user_id'], session['user_id'], 
+          session['user_id'], session['user_id'], session['user_id']))
     
     conversations = c.fetchall()
     
